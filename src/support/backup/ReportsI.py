@@ -6,6 +6,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 from math import log10, sqrt
 from sklearn.metrics import mean_squared_error
+from skimage.metrics import structural_similarity
+from skimage.feature import hog
+from skimage import data, exposure
+
 
 def plotHistory( hist ):
     plt.plot(hist.history['loss'])
@@ -16,23 +20,23 @@ def plotHistory( hist ):
     plt.legend(['train', 'val'], loc='upper left')
     plt.show()
 
-def predictByIndexes( model, noisy_images, nitid_images, noisy_files, nitid_files, test_indexes, accuracy_threshold, save_pred = False, save_folder_name = "", max_nitid = 0 ):
+def predictByIndexes( model, noisy_images, nitid_images, noisy_files, nitid_files, test_indexes, accuracy_threshold, save_pred = False, save_folder_name = "" ):
 
-    if save_pred:
-        os.makedirs(os.path.dirname(nitid_files[0]) + "/predictions_" + save_folder_name , exist_ok=True)
-        files = glob.glob(os.path.dirname(nitid_files[0]) + "/predictions_"+ save_folder_name+"/*")
-        for f in files:
-            os.remove(f)
+    # if save_pred:
+    #     os.makedirs(os.path.dirname(nitid_files[0]) + "/predictions_" + save_folder_name , exist_ok=True)
+    #     files = glob.glob(os.path.dirname(nitid_files[0]) + "/predictions_"+ save_folder_name+"/*")
+    #     for f in files:
+    #         os.remove(f)
             
-        os.makedirs(os.path.dirname(nitid_files[0]) + "/predictions_" + save_folder_name + "/BEST" , exist_ok=True)
-        files = glob.glob(os.path.dirname(nitid_files[0]) + "/predictions_"+ save_folder_name+"/BEST/*")
-        for f in files:
-            os.remove(f)
+    #     os.makedirs(os.path.dirname(nitid_files[0]) + "/predictions_" + save_folder_name + "/BEST" , exist_ok=True)
+    #     files = glob.glob(os.path.dirname(nitid_files[0]) + "/predictions_"+ save_folder_name+"/BEST/*")
+    #     for f in files:
+    #         os.remove(f)
         
-        os.makedirs(os.path.dirname(nitid_files[0]) + "/predictions_" + save_folder_name + "/WORST" , exist_ok=True)
-        files = glob.glob(os.path.dirname(nitid_files[0]) + "/predictions_"+ save_folder_name+"/WORST/*")
-        for f in files:
-            os.remove(f)
+    #     os.makedirs(os.path.dirname(nitid_files[0]) + "/predictions_" + save_folder_name + "/WORST" , exist_ok=True)
+    #     files = glob.glob(os.path.dirname(nitid_files[0]) + "/predictions_"+ save_folder_name+"/WORST/*")
+    #     for f in files:
+    #         os.remove(f)
 
     for i in test_indexes:
         
@@ -60,6 +64,12 @@ def predictByIndexes( model, noisy_images, nitid_images, noisy_files, nitid_file
 
         psnr_predi = 20 * log10(nitid_images[i].max() / sqrt(msenz_predi))
         psnr_noisy = 20 * log10(nitid_images[i].max() / sqrt(msenz_noisy))
+        
+        ssm_predi = structural_similarity( predictions[0].flatten(), nitid_images[i].flatten(), data_range = 1.0 )
+        ssm_noisy = structural_similarity( predictions[0].flatten(), noisy_images[i].flatten(), data_range = 1.0 )
+
+        hog_predi = hog_compare( nitid_images[i], predictions[0])
+        hog_noisy = hog_compare( nitid_images[i], noisy_images[i])
 
         if mse_predi < mse_noisy:
             mse_desc = "BEST"
@@ -80,12 +90,45 @@ def predictByIndexes( model, noisy_images, nitid_images, noisy_files, nitid_file
         print("MSE      Pred="+"{:.4f}".format(mse_predi)   + "  Noisy=" + "{:.4f}".format(mse_noisy)+" "+mse_desc)
         print("PSNR     Pred="+"{:.1f} dB".format(psnr_predi)  + " Noisy=" + "{:.1f} dB".format(psnr_noisy)+" "+psnr_desc)
         print("Accuracy Pred="+"{:.2f}".format(acc_predi)   + "    Noisy=" + "{:.2f}".format(acc_noisy)+" "+acc_desc)
+        print("SSM      Pred="+"{:.2f}".format(ssm_predi)   + "    Noisy=" + "{:.2f}".format(ssm_noisy))
+        print("HOG MSE  Pred="+"{:.2f}".format(hog_predi)   + "    Noisy=" + "{:.2f}".format(hog_noisy))
         print("******************************************************")
         
         if save_pred:
-            prediction_normalized = predictions[0]*max_nitid
-            saveRawImage( os.path.dirname(nitid_files[i]) + "/predictions_"+ save_folder_name + "/" + mse_desc + "/" + os.path.basename(nitid_files[i].replace("nitid", "prediction")), 
-                          prediction_normalized)
+            prediction_normalized = predictions[0]
+            saveRawImage( os.path.join(save_folder_name, os.path.basename(nitid_files[i])), nitid_images[i])
+            saveRawImage( os.path.join(save_folder_name, os.path.basename(noisy_files[i])), noisy_images[i])
+            saveRawImage( os.path.join(save_folder_name, os.path.basename(nitid_files[i].replace("nitid", "prediction"))), prediction_normalized)
+          
+def hog_compare( img_src, img_gt ):
+    fd_src = hog(img_src, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualize=False, channel_axis=-1)
+    fd_gt  = hog(img_gt, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualize=False, channel_axis=-1)
+    
+    fd_src = normalize( fd_src )
+    fd_gt = normalize( fd_gt )
+    
+    return mseNoZerosOneDim( fd_gt, fd_src)
+    
+def normalize( image, min_value = None, max_value = None ):
+    
+    if min_value == None:
+        min_value = image.min()
+        
+    if max_value == None:
+        max_value = image.max()
+    
+    diff_val = max_value - min_value
+    
+    if( diff_val == 0):
+        print("Black image found")
+        return image
+    
+    if min_value > image.min() or max_value < image.max():
+        print("Image with values out of range:" + str(image.min())+"  "+ str(image.max()))
+        sys.exit(-1)
+        
+    return (image-min_value)/diff_val
+
           
 def psnrNoZeros( img_src, img_gt ):
     if img_src.min() < 0 or img_gt.min() < 0:
@@ -179,6 +222,10 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
     bests_mse = 0
     psnr_predi = 0
     psnr_noisy = 0
+    ssm_predi = 0
+    ssm_noisy = 0
+    hog_predi = 0
+    hog_noisy = 0
     
     metrics_csv = []
     
@@ -208,6 +255,18 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
         psnr_predi += psnr_predi_current
         psnr_noisy += psnr_noisy_current
         
+        ssm_predi_current = structural_similarity( predictions[i].flatten(), nitid_images[i].flatten(), data_range = 1.0 )
+        ssm_noisy_current = structural_similarity( predictions[i].flatten(), noisy_images[i].flatten(), data_range = 1.0 )
+
+        ssm_predi += ssm_predi_current
+        ssm_noisy += ssm_noisy_current
+
+        hog_predi_current = hog_compare( nitid_images[i], predictions[i])
+        hog_noisy_current = hog_compare( nitid_images[i], noisy_images[i])
+
+        hog_predi += hog_predi_current
+        hog_noisy += hog_noisy_current
+        
         result_desc = ""
         
         if mse_predi_current < mse_noisy_current:
@@ -219,7 +278,9 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
         if acc_predi_current > acc_noisy_current:
             bests_acc += 1
             
-        metrics_csv.append((os.path.basename(nitid_files[i]), msenz_noisy_current, msenz_predi_current, mse_noisy_current, mse_predi_current, psnr_noisy_current, psnr_predi_current, acc_noisy_current, acc_predi_current))
+        metrics_csv.append((os.path.basename(nitid_files[i]), msenz_noisy_current, msenz_predi_current, mse_noisy_current, mse_predi_current, \
+                            psnr_noisy_current, psnr_predi_current, acc_noisy_current, acc_predi_current, \
+                            ssm_noisy_current, ssm_predi_current, hog_noisy_current, hog_predi_current))
 
         if save_pred:
 
@@ -253,6 +314,10 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
     mse_noisy /= images_count
     psnr_predi /= images_count
     psnr_noisy /= images_count
+    ssm_predi /= images_count
+    ssm_noisy /= images_count
+    hog_predi /= images_count
+    hog_noisy /= images_count
 
     print("Images count ="+ str(images_count))
     print("Best MSE     ="+str(bests_mse)+" ({:.2f}".format(bests_mse/images_count)+")")
@@ -261,8 +326,11 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
     print("MSE      Pred="+"{:.4f}".format(mse_predi)   + "  Noisy=" + "{:.4f}".format(mse_noisy))
     print("PSNR     Pred="+"{:.1f} dB".format(psnr_predi)  + " Noisy=" + "{:.1f} dB".format(psnr_noisy))
     print("Accuracy Pred="+"{:.2f}".format(acc_predi)   + "    Noisy=" + "{:.2f}".format(acc_noisy))
+    print("SSM      Pred="+"{:.2f}".format(ssm_predi)   + "    Noisy=" + "{:.2f}".format(ssm_noisy))
+    print("HOG MSE  Pred="+"{:.2f}".format(hog_predi)   + "    Noisy=" + "{:.2f}".format(hog_noisy))
 
-    headers_csv = ['image', 'MSE-nz Noisy', 'MSE-nz Pred', 'MSE Noisy', 'MSE Pred', 'PSNR Noisy', 'PSNR Predi', 'Acc Noisy', 'Acc Predi' ]
+    headers_csv = ['image', 'MSE-nz Noisy', 'MSE-nz Pred', 'MSE Noisy', 'MSE Pred', 'PSNR Noisy', 'PSNR Predi', 'Acc Noisy', 'Acc Predi', \
+                   'SSM Noisy', 'SSM Predi', 'Hog Noisy', 'Hog Predi']
     return metrics_csv, headers_csv
 
 def mse( image_a, image_b ):
@@ -288,6 +356,22 @@ def mseNoZeros( image_a, image_b ):
     
     #return math.sqrt(sum_squares/num_values)
     return sum_squares/num_values
+
+def mseNoZerosOneDim( image_a, image_b ):
+
+    sum_squares = 0
+    num_values = 0
+    #print(image_a.shape)
+    for x in range(image_a.shape[0]):
+        if image_a[x] != 0 or image_b[x] != 0:
+            sum_squares += (image_a[x] - image_b[x])**2
+            num_values = num_values + 1
+            
+    if num_values == 0:
+        return 0
+
+    return sum_squares/num_values
+        
 
 def accuracyNoZeros( image_prediction, image_gt, threshold ):
     h = image_prediction.shape[0]

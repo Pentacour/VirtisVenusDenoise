@@ -1,3 +1,7 @@
 dataset
 saves
-tests
+out_tests
+.ipynb_checkpoints
+__pycache__
+src/support/.ipynb_checkpoints
+*.ipynb
