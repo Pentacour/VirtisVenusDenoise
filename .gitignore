@@ -1,7 +1,11 @@
-dataset
-saves
+﻿dataset
 out_tests
-.ipynb_checkpoints
-__pycache__
+saves
+src/models/UNet/.ipynb_checkpoints
 src/support/.ipynb_checkpoints
-*.ipynb
+src/support/__pycache__
+src/tests/UNet/.ipynb_checkpoints
+src/tests/AEConnect/.ipynb_checkpoints
+src/tests/ConvSim/.ipynb_checkpoints
+src/tests/Ensemble/.ipynb_checkpoints
+src/tests/ResNet/.ipynb_checkpoints
