@@ -27,7 +27,8 @@ def buildModel( hyperparameters):
     else:
         loss_function = hyperparameters.LOSS
     
-    #model_unet.compile(optimizer=hyperparameters.OPTIMIZER, loss=hyperparameters.LOSS,metrics=[hyperparameters.LOSS])
+    print("Loss=" + str(loss_function) )
+    
     model_unet.compile(optimizer=hyperparameters.OPTIMIZER, loss=loss_function )#,metrics=[hyperparameters.LOSS])
     
     return model_unet
