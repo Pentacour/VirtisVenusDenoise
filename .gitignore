@@ -9,3 +9,5 @@ src/tests/AEConnect/.ipynb_checkpoints
 src/tests/ConvSim/.ipynb_checkpoints
 src/tests/Ensemble/.ipynb_checkpoints
 src/tests/ResNet/.ipynb_checkpoints
+*.pyc
+*.pyc
