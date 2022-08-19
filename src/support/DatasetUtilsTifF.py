@@ -390,6 +390,42 @@ def quitBlacks( img_path, remove = True ):
             print("=>" + file)
             shutil.move( file, os.path.dirname(file) + "/black_images")
 
+def quitBlacksNormalized( img_path, min_rad_noisy, max_rad_noisy, min_rad_nitid, max_rad_nitid, remove = True ):
+    noisy_files, nitid_files = getImagesNames(img_path)
+    
+    print("Check Blacks. Path:" + img_path )
+    print("Noisy files:"  + str(len(noisy_files)))
+    print("Nitid files:"  + str(len(nitid_files)))
+    
+    black_files = []
+    
+    for image_file in noisy_files:
+        image =  io.imread( image_file )
+        image = normalize( image, min_rad_noisy, max_rad_noisy)
+        if image.max() == image.min():
+            black_files.append( image_file )
+
+    for image_file in nitid_files:
+        image =  io.imread( image_file )
+        image = normalize( image, min_rad_nitid, max_rad_nitid)
+        if image.max() == image.min():
+            black_files.append( image_file )
+
+    print("Black images:" + str(len(black_files)))
+    print("Noisy:" + str(len([x for x in black_files if x.find("noisy") > 0])))
+    print("Nitid:" + str(len([x for x in black_files if x.find("nitid") > 0])))
+            
+    if( len(black_files) > 0 and remove ):
+        os.makedirs(img_path + "/black_images_normalized", exist_ok=True)
+        
+        print("Black files:")
+
+        for file in black_files:
+            file.replace("\\", "/")
+            print("=>" + file)
+            shutil.move( file, os.path.dirname(file) + "/black_images_normalized")
+
+
 def quitWithBlackSection( img_path, move_files = False ):
     PERC_BLACKS_THRESHOLD = 0.15#0.008
     
