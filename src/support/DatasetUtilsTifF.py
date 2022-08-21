@@ -167,6 +167,16 @@ def reshapeDataset( noisy_images, nitid_images, img_width, img_height ):
     
     return noisy_images, nitid_images
 
+def convertTifToPNGFolder( img_path ):
+    os.makedirs(img_path + "/tif_to_png", exist_ok=True)
+    
+    files = glob.glob( img_path + "/*.tif")
+    
+    for file in files:
+        image = loadNormalized( file )
+        saveUbyteImage( img_path + "/tif_to_png/" + os.path.basename(file)+ ".png", image)
+        
+
 def saveImages( img_path, files, images ):
     
     os.makedirs(img_path + "/tif_to_png", exist_ok=True)
@@ -175,7 +185,72 @@ def saveImages( img_path, files, images ):
     
     for i in range(num_files):
         saveUbyteImage( img_path + "/tif_to_png/" + os.path.basename(files[i])+ ".png",images[i])
+ 
+def quitBadImagesTif( img_path ):
+    os.makedirs(img_path + "/bad_images_png", exist_ok=True)
+    os.makedirs(img_path + "/bad_images_tif", exist_ok=True)
+    
+    files = glob.glob( img_path + "/*.tif")
+    
+    for file in files:
+        image = loadNormalized( file )
         
+        if isBadImage( img_as_ubyte( image ) ):
+            saveUbyteImage( img_path + "/bad_images_png/" + os.path.basename(file)+ ".png",image)
+            shutil.move( file, os.path.dirname(file) + "/bad_images_tif")
+
+def quitBadImagesPNG( img_path ):
+    os.makedirs(img_path + "/bad_images_png", exist_ok=True)
+    
+    files = glob.glob( img_path + "/*.png")
+    
+    for file in files:
+        image = loadNormalized( file )
+        
+        if isBadImage( image ):
+            shutil.move( file, os.path.dirname(file) + "/bad_images_png")
+
+    
+ 
+def isBadImage( img ):
+    NUM_PIXELS_FOR_BAD = 20
+    NUM_BAD_CASES_FOR_TRUE = 1
+
+    num_bad_cases = 0
+    
+    # Rows
+    for row in range(0,img.shape[0]-1):
+        num_pixels = 0
+        for col in range(0,img.shape[1]-2):
+            if img[row][col] != 0 and img[row][col] == img[row][col+1]:
+                num_pixels = num_pixels + 1
+            else:
+                if num_pixels >= NUM_PIXELS_FOR_BAD:
+                    num_bad_cases = num_bad_cases + 1
+                num_pixels = 0
+        
+        if num_pixels > NUM_PIXELS_FOR_BAD:
+            num_bad_cases = num_bad_cases + 1
+
+    # Cols
+    for col in range(0,img.shape[1]-1):
+        num_pixels = 0
+        for row in range(1,img.shape[1]-2):
+            if img[row][col] != 0 and img[row][col] == img[row+1][col]:
+                num_pixels = num_pixels + 1
+            else:
+                if num_pixels >= NUM_PIXELS_FOR_BAD:
+                    num_bad_cases = num_bad_cases + 1
+                num_pixels = 0
+        
+        if num_pixels > NUM_PIXELS_FOR_BAD:
+            num_bad_cases = num_bad_cases + 1
+
+                
+    return num_bad_cases >= NUM_BAD_CASES_FOR_TRUE
+             
+  
+    
 
 def saveUbyteImage( file_name, image ):
     image_save = img_as_ubyte( image)
@@ -389,6 +464,42 @@ def quitBlacks( img_path, remove = True ):
             file.replace("\\", "/")
             print("=>" + file)
             shutil.move( file, os.path.dirname(file) + "/black_images")
+
+def quitBlacksNormalized( img_path, min_rad_noisy, max_rad_noisy, min_rad_nitid, max_rad_nitid, remove = True ):
+    noisy_files, nitid_files = getImagesNames(img_path)
+    
+    print("Check Blacks. Path:" + img_path )
+    print("Noisy files:"  + str(len(noisy_files)))
+    print("Nitid files:"  + str(len(nitid_files)))
+    
+    black_files = []
+    
+    for image_file in noisy_files:
+        image =  io.imread( image_file )
+        image = normalize( image, min_rad_noisy, max_rad_noisy)
+        if image.max() == image.min():
+            black_files.append( image_file )
+
+    for image_file in nitid_files:
+        image =  io.imread( image_file )
+        image = normalize( image, min_rad_nitid, max_rad_nitid)
+        if image.max() == image.min():
+            black_files.append( image_file )
+
+    print("Black images:" + str(len(black_files)))
+    print("Noisy:" + str(len([x for x in black_files if x.find("noisy") > 0])))
+    print("Nitid:" + str(len([x for x in black_files if x.find("nitid") > 0])))
+            
+    if( len(black_files) > 0 and remove ):
+        os.makedirs(img_path + "/black_images_normalized", exist_ok=True)
+        
+        print("Black files:")
+
+        for file in black_files:
+            file.replace("\\", "/")
+            print("=>" + file)
+            shutil.move( file, os.path.dirname(file) + "/black_images_normalized")
+
 
 def quitWithBlackSection( img_path, move_files = False ):
     PERC_BLACKS_THRESHOLD = 0.15#0.008
