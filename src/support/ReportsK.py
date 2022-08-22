@@ -14,11 +14,52 @@ import csv
 
 
 def saveMetrics( dst_path, model_name, metrics_headers, metrics_values ):
+    #image, RMSE noisy, RMSE pre, MAE noi, MAE pre, PSNR no, PSNR pre, Acc No, Acc Pre
     
     with open(dst_path + '/metrics_'+ model_name + '.csv', 'w', newline='') as file_csv:
-        write = csv.writer(file_csv, delimiter=";")
-        write.writerow( metrics_headers )
-        write.writerows( metrics_values )
+        file_csv.write( metrics_headers[0] + ";" )        
+
+        file_csv.write( metrics_headers[4] + ";" )        
+        file_csv.write( metrics_headers[3] + ";" )        
+        
+        file_csv.write( metrics_headers[6] + ";" )        
+        file_csv.write( metrics_headers[5] + ";" )        
+        
+        file_csv.write( metrics_headers[8] + ";" )        
+        file_csv.write( metrics_headers[7] + ";" )        
+            
+        file_csv.write( "MAE improv; PSNR improv; Acc improv\n")                
+        num_rows = len( metrics_values )
+        for i in range(num_rows):
+            file_csv.write( metrics_values[i][0] + ";")
+
+            file_csv.write( toCommaDecimal(metrics_values[i][4], dec = 4) + ";")
+            file_csv.write( toCommaDecimal(metrics_values[i][3], dec = 4) + ";")
+
+            file_csv.write( toCommaDecimal(metrics_values[i][6], dec = 1) + ";")
+            file_csv.write( toCommaDecimal(metrics_values[i][5], dec = 1) + ";")
+
+            file_csv.write( toCommaDecimal(metrics_values[i][8], dec = 2) + ";")
+            file_csv.write( toCommaDecimal(metrics_values[i][7], dec = 2) + ";")
+            
+            file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][4], metrics_values[i][3]), dec=1) + ";")
+            file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][6], metrics_values[i][5]), dec=1) + ";")
+            file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][8], metrics_values[i][7]), dec=1) + "\n")
+                        
+
+def toCommaDecimal( value, dec = 2 ):
+    format_number = "{:."+str(dec)+"f}"
+    value = format_number.format( value )
+    return value.replace(".", ",")
+        
+def calcImprovement( value_pred, value_noisy ):
+    if value_noisy == 0 and value_pred == 0:
+        return 0
+
+    if value_noisy == 0:
+        return 99999
+
+    return ((value_pred / value_noisy)-1)*100
         
 def saveScores( dst_path, model_name,  metrics_values ):
     
