@@ -14,3 +14,5 @@ src/tests/ResNet/.ipynb_checkpoints
 *.pyc
 src/models/ResNet/__pycache__/ResnetBatchE.cpython-39.pyc
 src/models/ResNet/.ipynb_checkpoints/0100_1000-64-resnet-h-checkpoint.ipynb
+src/models/ResNet/__pycache__/ResnetBatchE.cpython-39.pyc
+*.pyc

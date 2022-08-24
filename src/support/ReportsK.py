@@ -44,7 +44,7 @@ def saveMetrics( dst_path, model_name, metrics_headers, metrics_values ):
             
             file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][4], metrics_values[i][3]), dec=1) + ";")
             file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][6], metrics_values[i][5]), dec=1) + ";")
-            file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][8], metrics_values[i][7]), dec=1) + "\n")
+            file_csv.write( toCommaDecimal( calcImprovement( metrics_values[i][8], metrics_values[i][7], aprox_zero = True), dec=1) + "\n")
                         
 
 def toCommaDecimal( value, dec = 2 ):
@@ -52,12 +52,15 @@ def toCommaDecimal( value, dec = 2 ):
     value = format_number.format( value )
     return value.replace(".", ",")
         
-def calcImprovement( value_pred, value_noisy ):
+def calcImprovement( value_pred, value_noisy, aprox_zero = False ):
     if value_noisy == 0 and value_pred == 0:
         return 0
 
-    if value_noisy == 0:
+    if value_noisy == 0 and not aprox_zero:
         return 99999
+
+    if value_noisy == 0 and aprox_zero:
+        value_noisy = 0.0001
 
     return ((value_pred / value_noisy)-1)*100
         
@@ -543,6 +546,7 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
     bests_maenz = 0
     psnr_predi = 0
     psnr_noisy = 0
+    bests_psnr  = 0
     ssm_predi = 0
     ssm_noisy = 0
     hog_predi = 0
@@ -602,6 +606,9 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
         if acc_predi_current > acc_noisy_current:
             bests_acc += 1
             
+        if psnr_predi_current > psnr_noisy_current:
+            bests_psnr += 1
+            
         metrics_csv.append((os.path.basename(nitid_files[i]), rmsenz_noisy_current, rmsenz_predi_current, maenz_noisy_current, maenz_predi_current, \
                             psnr_noisy_current, psnr_predi_current, acc_noisy_current, acc_predi_current, \
                             ssm_noisy_current, ssm_predi_current, hog_noisy_current, hog_predi_current))
@@ -639,6 +646,7 @@ def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold
     print("Images count ="+ str(images_count))
     print("Best RMSENZ  ="+str(bests_rmsenz)+" ({:.2f}".format(bests_rmsenz/images_count)+")")
     print("Best MAENZ   ="+str(bests_maenz)+" ({:.2f}".format(bests_maenz/images_count)+")")
+    print("Best PSNR    ="+str(bests_psnr)+" ({:.2f}".format(bests_psnr/images_count)+")")
     print("Best Accuracy="+str(bests_acc)+" ({:.2f}".format(bests_acc/images_count)+")")
     print("RMSE-NZ  Pred="+"{:.4f}".format(rmsenz_predi)+ "  Noisy=" + "{:.4f}".format(rmsenz_noisy))
     print("MAE-NZ   Pred="+"{:.4f}".format(maenz_predi)   + "  Noisy=" + "{:.4f}".format(maenz_noisy))
