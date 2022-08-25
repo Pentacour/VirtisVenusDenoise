@@ -11,10 +11,12 @@ import numpy as np
 
 
 SAVED_MODEL_UNET = "0100_1000-64-unet-xn3"
-SAVED_MODEL_RESNET = "0100_1000-64-unet-xn3"
+SAVED_MODEL_RESNET = "0100_1000-64-resnet-h"
 SAVED_MODEL_CONVSIM = "0100_1000-64-convsim-xc3"
 SAVED_MODEL_AECONNECT = "0100_1000-64-aeconnect-xe4"
 SAVED_MODEL_ENSEMBLE = "0100_1000-64-aeconnect-xe4"
+
+SAVED_MODEL_RESULTS = "0100_1000-64-"
 
 DEST_TESTS_UNET = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_UNET))
 DEST_TESTS_RESNET = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_RESNET))
@@ -30,10 +32,9 @@ df_ensemble = pd.read_csv(os.path.abspath(os.path.join(DEST_TESTS_ENSEMBLE, 'met
 
 #%%
 
-images_best = np.empty(len(df_unet))
-
-for score_index in range(7,10):
-    scores = []
+for metric_index in range(7,10):
+    metric_scores = []
+    images_best = np.empty(len(df_unet))
     
     for index, row in df_unet.iterrows():
         values = [0,0,0,0]
@@ -45,30 +46,35 @@ for score_index in range(7,10):
             print("Error: Differnet order in images")
             sys.exit(-1)
         
-        values[0] = df_unet.iloc[index][score_index]
-        values[1] = df_resnet.iloc[index][score_index]
-        values[2] = df_convsim.iloc[index][score_index]
-        values[3] = df_aeconnect.iloc[index][score_index]
-        #values[4] = df_ensemble.iloc[index][score_index]
+        values[0] = df_unet.iloc[index][metric_index]
+        values[1] = df_resnet.iloc[index][metric_index]
+        values[2] = df_convsim.iloc[index][metric_index]
+        values[3] = df_aeconnect.iloc[index][metric_index]
         
         values[0] = float(values[0].replace(",","."))
         values[1] = float(values[1].replace(",","."))
         values[2] = float(values[2].replace(",","."))
         values[3] = float(values[3].replace(",","."))
         
-        if index == 7:
+        if metric_index == 7:
             selected_value = min(values)
         else:
             selected_value = max(values)
 
         selected_index = values.index(selected_value)
-        scores.append(selected_index)
+        metric_scores.append(selected_index)
         
         images_best[index] = selected_index
 
-    print("SCORE:"+str(score_index))        
+    print("SCORE:"+str(metric_index))        
     for i in range(4):
-        print(str(i) + "->" + str(scores.count(i)) + " / " + str(len(scores)))
+        print(str(i) + "->" + str(metric_scores.count(i)) + " / " + str(len(metric_scores)))
     
-    
-print(images_best)
+    with open(os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_RESULTS + str(metric_index) + '.csv')), 'w', newline='') as file_csv:
+
+        file_csv.write("image;best\n")
+        
+        for i in range( len(df_unet)):
+            file_csv.write( df_unet.iloc[i][0] + ";")
+            file_csv.write( str(images_best[i]) + "\n")
+ 
