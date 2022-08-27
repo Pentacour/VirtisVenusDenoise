@@ -18,3 +18,9 @@ src/models/ResNet/__pycache__/ResnetBatchE.cpython-39.pyc
 *.pyc
 src/models/AEConnections/__pycache__/AEConnectionsF.cpython-39.pyc
 src/models/ResNet/__pycache__/ResnetBatchE.cpython-39.pyc
+src/models/AEConnections/.ipynb_checkpoints/0001_0010-64-aeconnect-xe4-checkpoint.ipynb
+src/models/AEConnections/.ipynb_checkpoints/0010_1000-64-aeconnect-xe4-checkpoint.ipynb
+src/models/ConvSim/.ipynb_checkpoints/0001_0010-64-convsim-xc3-checkpoint.ipynb
+src/models/ConvSim/.ipynb_checkpoints/0001_0100-64-convsim-xc3-checkpoint.ipynb
+src/models/ConvSim/.ipynb_checkpoints/0010_1000-64-convsim-xc3-checkpoint.ipynb
+src/models/ResNet/.ipynb_checkpoints/0010_1000-64-resnet-xh-checkpoint.ipynb
