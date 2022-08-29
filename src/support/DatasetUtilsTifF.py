@@ -5,6 +5,7 @@ seed(1)
 tensorflow.random.set_seed(2)
 
 import os, sys
+import pandas as pd
 import shutil
 import glob
 import re
@@ -1203,51 +1204,42 @@ def copyTifFromPNGFiles( tif_path, png_path ):
         shutil.copyfile(src, dst)
     
 
-#%%
-#TIF_PATH = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0010_1000/"
-#PNG_PATH = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0010_1000/PNG/"
-#copyTifFromPNGFiles(TIF_PATH, PNG_PATH)
+def readDatasetClassification(img_path, img_width, img_height, radiance_limits, classes_path ):
+    
+    noisy_files, nitid_files = getImagesNames(img_path)
+ 
+    noisy_images = []
 
-#%%
-# IMG_PATH = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0100_1000/TIFF/work/divided_64x64/filtered/" 
-# checkRangesNitidNoise( IMG_PATH, max_noisy = 0.06, max_nitid = 0.326 )
+    for image_file in noisy_files:
+        image =  loadNormalized( image_file, radiance_limits.noisy_min, radiance_limits.noisy_max )
+        noisy_images.append( image )     
+        if image.shape[0] != img_height or image.shape[1] != img_width or len(image.shape)!=2:
+            print("Error:" + str(image.shape))
+ 
 
-#%%
-#IMG_PATH = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0100_1000/TIFF/work/divided_64x64/filtered/" 
-#os.makedirs(IMG_PATH + "/rotated", exist_ok=True)
+    noisy_images = np.array( noisy_images, dtype="float32" ) 
+ 
+    df_classes = pd.read_csv(classes_path, sep=';')
+ 
+    classes = []
 
-#noisy_files, nitid_files = getImagesNames(IMG_PATH)
+    for noisy_file in noisy_files:
+        file_name = os.path.basename(noisy_file)
 
-#angles = [90, 180, 270]
-
-#for file in nitid_files:
-#    for angle in angles:
-#        rotated_image = rotateImage( loadRawImage( file ), angle )
-#        saveRawImage( IMG_PATH + "/rotated/" + os.path.basename(file).replace("nitid", str(angle)+"_nitid"), rotated_image )
-
-#    break
-
-#for file in noisy_files:
-#    for angle in angles:
-#        rotated_image = rotateImage( loadRawImage( file ), angle )
-#        saveRawImage( IMG_PATH + "/rotated/" + os.path.basename(file).replace("noisy", str(angle)+"_noisy"), rotated_image )
-
-#    break
+        found_class = df_classes[df_classes['image'].str.contains(file_name[:16])==True]
+        
+        if found_class.size == 0:
+            print("Not found:" + file_name[:16] )
+            sys.exit(-1)
+        #if df_classes.iloc[index][0][:16] != file_name[:16]:
+         #   print("Different files:" + file_name[:16] + " --- " + df_classes.iloc[index][0][:16])
+          #  sys.exit(-1)
+        
+        classes.append(found_class.iloc[0][1])
 
 
-#%%
-# IMG_PATH_NO = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0100_1000/TIFF/work/divided_64x64/filtered/work_da/test/VI0112_00_02_11_noisy_idx123.tif"
-# IMG_PATH_NI = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0100_1000/TIFF/work/divided_64x64/filtered/work_da/test/VI0112_00_02_11_nitid_idx134.tif"
-# IMG_PATH_PR = "D:/UNIR/TFM/Docs/NoiseCorrec/NoiseCorrec_0100_1000/TIFF/work/divided_64x64/filtered/work_da/test/predictions/VI0112_00_02_11_prediction_idx134.tif"
-
-# img_noisy = loadRawImage( IMG_PATH_NO )
-# img_predi = loadRawImage( IMG_PATH_PR )
-# img_nitid = loadRawImage( IMG_PATH_NI )
-
-# plt.imshow(img_nitid, cmap='gray')
-
-# #%%
-# print("NOISY:"+"{:.3f}".format(img_noisy.min())+" "+"{:.3f}".format(img_noisy.max()))
-# print("PREDI:"+"{:.3f}".format(img_predi.min())+" "+"{:.3f}".format(img_predi.max()))
-# print("NITID:"+"{:.3f}".format(img_nitid.min())+" "+"{:.3f}".format(img_nitid.max()))
-
+    print("Read dataset. Path: " + img_path )
+    print("Noisy files:"  + str(len(noisy_files)))
+    print("Nitid files:"  + str(len(nitid_files)))
+                
+    return noisy_files, classes, noisy_images
