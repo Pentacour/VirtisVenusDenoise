@@ -99,6 +99,9 @@ def plotHistory( hist ):
     plt.xlabel('epoch')
     plt.legend(['train', 'val'], loc='upper left')
     plt.show()
+    
+    best_epochs = np.argmin(hist.history['val_loss']) + 1
+    print("Best Epoch:" + str(best_epochs))
 
 
 def calcPredictionMetricsModels( models, noisy_images, nitid_images, accuracy_threshold, save_pred = False, save_path = "", \
