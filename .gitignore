@@ -51,3 +51,10 @@ src/support/ensemble/.ipynb_checkpoints/classification-vgg-unet-2-checkpoint.ipy
 src/support/ensemble/.ipynb_checkpoints/classification-vgg-unet-checkpoint.ipynb
 src/support/ensemble/.ipynb_checkpoints/classification-vgg16-1-checkpoint.ipynb
 src/support/ensemble/.ipynb_checkpoints/classification-vgg16-2-checkpoint.ipynb
+src/models/AEConnections/.ipynb_checkpoints/0100_1000-64-aeconnect-xe4-2-checkpoint.ipynb
+src/models/ConvSim/.ipynb_checkpoints/0001_0100-64-convsim-xxc5-checkpoint.ipynb
+src/models/ConvSim/.ipynb_checkpoints/0100_1000-64-convsim-xxc3-3-checkpoint.ipynb
+src/models/ResNet/.ipynb_checkpoints/0001_0010-64-resnet-xxh-checkpoint.ipynb
+src/models/ResNet/.ipynb_checkpoints/0001_0100-64-resnet-xxh-checkpoint.ipynb
+src/models/ResNet/.ipynb_checkpoints/0010_1000-64-resnet-xxh-checkpoint.ipynb
+src/models/ResNet/.ipynb_checkpoints/0100_1000-64-resnet-xxh-2-checkpoint.ipynb
