@@ -104,158 +104,6 @@ def plotHistory( hist ):
     print("Best Epoch:" + str(best_epochs))
 
 
-def calcPredictionMetricsModels( models, noisy_images, nitid_images, accuracy_threshold, save_pred = False, save_path = "", \
-                                noisy_files ="", nitid_files = "", max_nitid = 0 ):
-
-    if save_pred:
-        os.makedirs(save_path, exist_ok=True)
-        files = glob.glob(save_path+"/*")
-        for f in files:
-            if not os.path.isdir(f):
-                os.remove(f)
-            
-        os.makedirs(save_path + "/BEST" , exist_ok=True)
-        files = glob.glob(save_path+"/BEST/*")
-        for f in files:
-            os.remove(f)
-        
-        os.makedirs(save_path + "/WORST" , exist_ok=True)
-        files = glob.glob(save_path+"/WORST/*")
-        for f in files:
-            os.remove(f)
-    
-    images_count = len(noisy_images)        
-
-    rmsenz_predi = 0
-    rmsenz_noisy = 0
-    acc_predi = 0
-    acc_noisy = 0
-    maenz_predi = 0
-    maenz_noisy = 0
-    bests_acc = 0
-    bests_rmsenz = 0
-    psnr_predi = 0
-    psnr_noisy = 0
-    ssm_predi = 0
-    ssm_noisy = 0
-    hog_predi = 0
-    hog_noisy = 0
-    
-    metrics_csv = []
-    
-    for i in range(images_count):
-        
-        predictions = []
-        
-        for model in models:
-            prediction = model.predict(np.array([noisy_images[i]]))
-            prediction = limitPredictions( prediction )
-            predictions.append( prediction[0].copy() )
-            
-        predictions = np.array(predictions)
-
-        ensemble = predictions[0]
-
-        for j in range(1,predictions.shape[0]):
-            ensemble += predictions[j]
-            
-        ensemble /= predictions.shape[0]
-        
-        rmsenz_predi_current = sqrt(mseNoZeros(ensemble, nitid_images[i]))
-        rmsenz_noisy_current = sqrt(mseNoZeros(noisy_images[i], nitid_images[i]))
-        
-        rmsenz_predi += rmsenz_predi_current
-        rmsenz_noisy += rmsenz_noisy_current
-
-        acc_predi_current = accuracyNoZeros(ensemble, nitid_images[i], accuracy_threshold )
-        acc_noisy_current = accuracyNoZeros(noisy_images[i], nitid_images[i], accuracy_threshold )
-
-        acc_predi += acc_predi_current
-        acc_noisy += acc_noisy_current
-
-        maenz_predi_current = maeNoZeros(ensemble, nitid_images[i])
-        maenz_noisy_current = maeNoZeros(noisy_images[i], nitid_images[i])
-        
-        maenz_predi += maenz_predi_current
-        maenz_noisy += maenz_noisy_current
-        
-        psnr_predi_current = (20 * log10(nitid_images[i].max() / rmsenz_predi_current))
-        psnr_noisy_current = (20 * log10(nitid_images[i].max() / rmsenz_noisy_current))
-        
-        psnr_predi += psnr_predi_current
-        psnr_noisy += psnr_noisy_current
-        
-        ssm_predi_current = structural_similarity( ensemble.flatten(), nitid_images[i].flatten(), data_range = 1.0 )
-        ssm_noisy_current = structural_similarity( ensemble.flatten(), noisy_images[i].flatten(), data_range = 1.0 )
-
-        ssm_predi += ssm_predi_current
-        ssm_noisy += ssm_noisy_current
-
-        hog_predi_current = hog_compare( nitid_images[i], ensemble)
-        hog_noisy_current = hog_compare( nitid_images[i], noisy_images[i])
-
-        hog_predi += hog_predi_current
-        hog_noisy += hog_noisy_current
-        
-        result_desc = ""
-        
-        if rmsenz_predi_current < rmsenz_noisy_current:
-            bests_rmsenz += 1
-            result_desc = "BEST"
-        else:
-            result_desc = "WORST"
-            
-        if acc_predi_current > acc_noisy_current:
-            bests_acc += 1
-            
-        metrics_csv.append((os.path.basename(nitid_files[i]), rmsenz_noisy_current, rmsenz_predi_current, maenz_noisy_current, maenz_predi_current, \
-                            psnr_noisy_current, psnr_predi_current, acc_noisy_current, acc_predi_current, \
-                            ssm_noisy_current, ssm_predi_current, hog_noisy_current, hog_predi_current))
-
-        if save_pred:
-
-            if ensemble.max() > 1 or ensemble.min() < 0:
-                print("Unexpected value = "+str(ensemble.max()+ " "+str(ensemble.min())))
-                sys.exit(-1)
-
-            ensemble_normalized = (ensemble-ensemble.min())/(ensemble.max()-ensemble.min())
-
-            noisy_normalized = (noisy_images[i]-noisy_images[i].min())/(noisy_images[i].max()-noisy_images[i].min())
-
-            nitid_normalized = (nitid_images[i]-nitid_images[i].min())/(nitid_images[i].max()-nitid_images[i].min())
-
-            concatenated = np.concatenate((noisy_normalized, ensemble_normalized, nitid_normalized), axis=1)
-            saveImage( save_path + "/" + result_desc + "/" + os.path.basename(nitid_files[i]).replace("noisy", "three").replace("tif", "png"), 
-                          concatenated)
-
-    
-
-    rmsenz_predi /= images_count
-    rmsenz_noisy /= images_count
-    acc_predi /= images_count
-    acc_noisy /= images_count
-    maenz_predi /= images_count
-    maenz_noisy /= images_count
-    psnr_predi /= images_count
-    psnr_noisy /= images_count
-    ssm_predi /= images_count
-    ssm_noisy /= images_count
-    hog_predi /= images_count
-    hog_noisy /= images_count
-
-    print("Images count ="+ str(images_count))
-    print("Best RMSENZ  ="+str(bests_rmsenz)+" ({:.2f}".format(bests_rmsenz/images_count)+")")
-    print("Best Accuracy="+str(bests_acc)+" ({:.2f}".format(bests_acc/images_count)+")")
-    print("RMSE-NZ  Pred="+"{:.4f}".format(rmsenz_predi)+ "  Noisy=" + "{:.4f}".format(rmsenz_noisy))
-    print("MAE-NZ   Pred="+"{:.4f}".format(maenz_predi)   + "  Noisy=" + "{:.4f}".format(maenz_noisy))
-    print("PSNR     Pred="+"{:.1f} dB".format(psnr_predi)  + " Noisy=" + "{:.1f} dB".format(psnr_noisy))
-    print("Accuracy Pred="+"{:.2f}".format(acc_predi)   + "    Noisy=" + "{:.2f}".format(acc_noisy))
-    print("SSM      Pred="+"{:.2f}".format(ssm_predi)   + "    Noisy=" + "{:.2f}".format(ssm_noisy))
-    print("HOG MSE  Pred="+"{:.2f}".format(hog_predi)   + "    Noisy=" + "{:.2f}".format(hog_noisy))
-
-    headers_csv = ['image', 'RMSE-nz Noisy', 'RMSE-nz Pred', 'MAE-nz Noisy', 'MAE-nz Pred', 'PSNR Noisy', 'PSNR Predi', 'Acc Noisy', 'Acc Predi', \
-                   'SSM Noisy', 'SSM Predi', 'Hog Noisy', 'Hog Predi']
-    return metrics_csv, headers_csv
 
 
 def predictByIndexesModels( models, noisy_images, nitid_images, noisy_files, nitid_files, test_indexes, accuracy_threshold, save_pred = False, \
@@ -511,6 +359,170 @@ def calcMSEnz( noisy_files, nitid_files, correct_negative = True ):
 
 def loadRawImage( file_name ):
     return io.imread( file_name )
+
+
+def calcPredictionMetricsEnsemble( models, weights, noisy_images, nitid_images, accuracy_threshold, save_pred = False, save_path = "", noisy_files ="", nitid_files = "", max_nitid = 0 ):
+
+    if save_pred:
+        os.makedirs(save_path, exist_ok=True)
+        files = glob.glob(save_path+"/*")
+        for f in files:
+            if not os.path.isdir(f):
+                os.remove(f)
+            
+        os.makedirs(save_path + "/BEST" , exist_ok=True)
+        files = glob.glob(save_path+"/BEST/*")
+        for f in files:
+            os.remove(f)
+        
+        os.makedirs(save_path + "/WORST" , exist_ok=True)
+        files = glob.glob(save_path+"/WORST/*")
+        for f in files:
+            os.remove(f)
+    
+    images_count = len(noisy_images)        
+
+    rmsenz_predi = 0
+    rmsenz_noisy = 0
+    maenz_predi = 0
+    maenz_noisy = 0
+    acc_predi = 0
+    acc_noisy = 0
+    bests_acc = 0
+    bests_rmsenz = 0
+    bests_maenz = 0
+    psnr_predi = 0
+    psnr_noisy = 0
+    bests_psnr  = 0
+    ssm_predi = 0
+    ssm_noisy = 0
+    hog_predi = 0
+    hog_noisy = 0
+    
+    metrics_csv = []
+    
+    for i in range(images_count):
+        
+        predictions = []
+
+        for model in models:
+            prediction = model.predict(np.array([noisy_images[i]]))
+            prediction = limitPredictions( prediction )
+            predictions.append( prediction[0].copy() )
+            
+        predictions = np.array(predictions)
+
+        ensemble = np.zeros( shape=predictions[0].shape)
+        
+        for j in range(len(weights)):
+            ensemble += predictions[j]*weights[j]
+        
+        
+        rmsenz_predi_current = sqrt(mseNoZeros(ensemble, nitid_images[i]))
+        rmsenz_noisy_current = sqrt(mseNoZeros(noisy_images[i], nitid_images[i]))
+        
+        rmsenz_predi += rmsenz_predi_current
+        rmsenz_noisy += rmsenz_noisy_current
+
+        maenz_predi_current = maeNoZeros(ensemble, nitid_images[i])
+        maenz_noisy_current = maeNoZeros(noisy_images[i], nitid_images[i])
+        
+        maenz_predi += maenz_predi_current
+        maenz_noisy += maenz_noisy_current
+
+        acc_predi_current = accuracyNoZeros(ensemble, nitid_images[i], accuracy_threshold )
+        acc_noisy_current = accuracyNoZeros(noisy_images[i], nitid_images[i], accuracy_threshold )
+
+        acc_predi += acc_predi_current
+        acc_noisy += acc_noisy_current
+        
+        psnr_predi_current = (20 * log10(nitid_images[i].max() / rmsenz_predi_current))
+        psnr_noisy_current = (20 * log10(nitid_images[i].max() / rmsenz_noisy_current))
+        
+        psnr_predi += psnr_predi_current
+        psnr_noisy += psnr_noisy_current
+        
+        ssm_predi_current = structural_similarity( ensemble.flatten(), nitid_images[i].flatten(), data_range = 1.0 )
+        ssm_noisy_current = structural_similarity( ensemble.flatten(), noisy_images[i].flatten(), data_range = 1.0 )
+
+        ssm_predi += ssm_predi_current
+        ssm_noisy += ssm_noisy_current
+
+        hog_predi_current = hog_compare( nitid_images[i], ensemble)
+        hog_noisy_current = hog_compare( nitid_images[i], noisy_images[i])
+
+        hog_predi += hog_predi_current
+        hog_noisy += hog_noisy_current
+        
+        result_desc = ""
+        
+        if rmsenz_predi_current < rmsenz_noisy_current:
+            bests_rmsenz += 1
+            result_desc = "BEST"
+        else:
+            result_desc = "WORST"
+
+        if maenz_predi_current < maenz_noisy_current:
+            bests_maenz += 1
+
+        if acc_predi_current > acc_noisy_current:
+            bests_acc += 1
+            
+        if psnr_predi_current > psnr_noisy_current:
+            bests_psnr += 1
+            
+        metrics_csv.append((os.path.basename(nitid_files[i]), rmsenz_noisy_current, rmsenz_predi_current, maenz_noisy_current, maenz_predi_current, \
+                            psnr_noisy_current, psnr_predi_current, acc_noisy_current, acc_predi_current, \
+                            ssm_noisy_current, ssm_predi_current, hog_noisy_current, hog_predi_current))
+
+        if save_pred:
+            if ensemble.max() > 1 or ensemble.min() < 0:
+                print("Unexpected value = "+str(ensemble.max()+ " "+str(ensemble.min())))
+                sys.exit(-1)
+
+            prediction_normalized = (ensemble-ensemble.min())/(ensemble.max()-ensemble.min())
+
+            noisy_normalized = (noisy_images[i]-noisy_images[i].min())/(noisy_images[i].max()-noisy_images[i].min())
+
+            nitid_normalized = (nitid_images[i]-nitid_images[i].min())/(nitid_images[i].max()-nitid_images[i].min())
+
+            concatenated = np.concatenate((noisy_normalized, prediction_normalized, nitid_normalized), axis=1)
+            saveImage( save_path + "/" + result_desc + "/" + os.path.basename(nitid_files[i]).replace("noisy", "three").replace("tif", "png"), 
+                          concatenated)
+
+    
+
+    rmsenz_predi /= images_count
+    rmsenz_noisy /= images_count
+    maenz_predi /= images_count
+    maenz_noisy /= images_count
+    acc_predi /= images_count
+    acc_noisy /= images_count
+    psnr_predi /= images_count
+    psnr_noisy /= images_count
+    ssm_predi /= images_count
+    ssm_noisy /= images_count
+    hog_predi /= images_count
+    hog_noisy /= images_count
+
+    print("Images count ="+ str(images_count))
+    print("Best RMSENZ  ="+str(bests_rmsenz)+" ({:.2f}".format(bests_rmsenz/images_count)+")")
+    print("Best MAENZ   ="+str(bests_maenz)+" ({:.2f}".format(bests_maenz/images_count)+")")
+    print("Best PSNR    ="+str(bests_psnr)+" ({:.2f}".format(bests_psnr/images_count)+")")
+    print("Best Accuracy="+str(bests_acc)+" ({:.2f}".format(bests_acc/images_count)+")")
+    print("RMSE-NZ  Pred="+"{:.4f}".format(rmsenz_predi)+ "  Noisy=" + "{:.4f}".format(rmsenz_noisy))
+    print("MAE-NZ   Pred="+"{:.4f}".format(maenz_predi)   + "  Noisy=" + "{:.4f}".format(maenz_noisy))
+    print("PSNR     Pred="+"{:.1f} dB".format(psnr_predi)  + " Noisy=" + "{:.1f} dB".format(psnr_noisy))
+    print("Accuracy Pred="+"{:.2f}".format(acc_predi)   + "    Noisy=" + "{:.2f}".format(acc_noisy))
+    print("SSM      Pred="+"{:.2f}".format(ssm_predi)   + "    Noisy=" + "{:.2f}".format(ssm_noisy))
+    print("HOG MSE  Pred="+"{:.2f}".format(hog_predi)   + "    Noisy=" + "{:.2f}".format(hog_noisy))
+
+    headers_csv = ['image', 'RMSE-nz Noisy', 'RMSE-nz Pred', 'MAE-nz Noisy', 'MAE-nz Pred', 'PSNR Noisy', 'PSNR Predi', 'Acc Noisy', 'Acc Predi', \
+                   'SSM Noisy', 'SSM Predi', 'Hog Noisy', 'Hog Predi']
+    return metrics_csv, headers_csv
+
+
+
 
 
 def calcPredictionMetrics( model, noisy_images, nitid_images, accuracy_threshold, save_pred = False, save_path = "", noisy_files ="", nitid_files = "", max_nitid = 0 ):
