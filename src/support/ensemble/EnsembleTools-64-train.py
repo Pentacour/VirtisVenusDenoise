@@ -10,11 +10,17 @@ import pandas as pd
 import numpy as np
 
 
-SAVED_MODEL_UNET = "0100_1000-64-unet-xn3_train"
-SAVED_MODEL_RESNET = "0100_1000-64-resnet-h_train"
-SAVED_MODEL_CONVSIM = "0100_1000-64-convsim-xc3_train"
-SAVED_MODEL_AECONNECT = "0100_1000-64-aeconnect-xe4_train"
-SAVED_MODEL_ENSEMBLE = "0100_1000-64-aeconnect-xe4_train"
+SAVED_MODEL_UNET = "0100_1000-64-unet-xxn3_train"
+SAVED_MODEL_RESNET = "0100_1000-64-resnet-xxh-2_train"
+SAVED_MODEL_CONVSIM = "0100_1000-64-convsim-xxc3-5_train"
+SAVED_MODEL_AECONNECT = "0100_1000-64-aeconnect-xxe4_train"
+
+
+# SAVED_MODEL_UNET = "0100_1000-64-unet-xn3_train"
+# SAVED_MODEL_RESNET = "0100_1000-64-resnet-h_train"
+# SAVED_MODEL_CONVSIM = "0100_1000-64-convsim-xc3_train"
+# SAVED_MODEL_AECONNECT = "0100_1000-64-aeconnect-xe4_train"
+# SAVED_MODEL_ENSEMBLE = "0100_1000-64-aeconnect-xe4_train"
 
 SAVED_MODEL_RESULTS = "0100_1000-64-train"
 
@@ -22,7 +28,7 @@ DEST_TESTS_UNET = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODE
 DEST_TESTS_RESNET = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_RESNET))
 DEST_TESTS_CONVSIM = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_CONVSIM))
 DEST_TESTS_AECONNECT = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_AECONNECT))
-DEST_TESTS_ENSEMBLE = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_ENSEMBLE))
+#DEST_TESTS_ENSEMBLE = os.path.abspath(os.path.join('../../../out_tests/', SAVED_MODEL_ENSEMBLE))
 
 df_unet = pd.read_csv(os.path.abspath(os.path.join(DEST_TESTS_UNET, 'metrics_' +  \
                                                      SAVED_MODEL_UNET.replace('_train','') + '.csv')), sep=';')
@@ -32,8 +38,8 @@ df_convsim = pd.read_csv(os.path.abspath(os.path.join(DEST_TESTS_CONVSIM, 'metri
                                                      SAVED_MODEL_CONVSIM.replace('_train','') + '.csv')), sep=';')
 df_aeconnect = pd.read_csv(os.path.abspath(os.path.join(DEST_TESTS_AECONNECT, 'metrics_' +  \
                                                      SAVED_MODEL_AECONNECT.replace('_train','') + '.csv')), sep=';')
-df_ensemble = pd.read_csv(os.path.abspath(os.path.join(DEST_TESTS_ENSEMBLE, 'metrics_' + \
-                                                     SAVED_MODEL_ENSEMBLE.replace('_train','') + '.csv')), sep=';')
+# df_ensemble = pd.read_csv(os.path.abspath(os.path.join(DEST_TESTS_ENSEMBLE, 'metrics_' + \
+#                                                      SAVED_MODEL_ENSEMBLE.replace('_train','') + '.csv')), sep=';')
 
 #%%
 
@@ -48,7 +54,7 @@ for metric_index in range(7,10):
             or df_unet.iloc[index][0] !=  df_convsim.iloc[index][0] \
             or df_unet.iloc[index][0] !=  df_aeconnect.iloc[index][0]:
             
-            print("Error: Differnet order in images")
+            print("Error: Different order in images")
             sys.exit(-1)
         
         values[0] = df_unet.iloc[index][metric_index]

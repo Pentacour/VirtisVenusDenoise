@@ -1229,11 +1229,8 @@ def readDatasetClassification(img_path, img_width, img_height, radiance_limits, 
         found_class = df_classes[df_classes['image'].str.contains(file_name[:16])==True]
         
         if found_class.size == 0:
-            print("Not found:" + file_name[:16] )
+            print("Not found in classes :" + file_name[:16] )
             sys.exit(-1)
-        #if df_classes.iloc[index][0][:16] != file_name[:16]:
-         #   print("Different files:" + file_name[:16] + " --- " + df_classes.iloc[index][0][:16])
-          #  sys.exit(-1)
         
         classes.append(found_class.iloc[0][1])
 
